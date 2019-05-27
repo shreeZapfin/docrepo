@@ -85,13 +85,33 @@
                     <div class="table-responsive">
                         {{Form::open(['route'=>'pickups.updateStatus','method'=>'post','id'=>'UpdateStatusForm'])}}
                         <div class="row">
-                            <div class="col-md-5 col-sm-4">
+                            <div class="col-md-3 col-sm-2" style="padding-top: 13px;">
+                                 <strong>Filter By Company Name</strong>
+                                 <!--Here we use foreach because we need Company -->
+                                    <select name="company_name" class="form-control" id="company_name">
+                                        <option disable="true" selected="true" value="-1" >All</option>
+                                       <?php foreach ($getCustomersList as $key => $value) { ?>
+                                            <option value="<?php echo $value['id']; ?>"><?php
+                                                echo ucwords($value['company_name']);
+                                                ?>
+                                            </option>
+                                        <?php } ?>
+                                    </select>
+                          </div>
+                          <div class="col-md-3 col-sm-2" style="padding-top: 13px;">
+                              <strong>Filter By Product Name</strong>
+                              <!--Here we called product list -->
+                                    <select name="product_name" class="form-control" id="product_name">
+                                        <option disable="true" selected="true" value="-1" >All</option>
+                                    </select>
+                          </div>
+                            <div class="col-md-3 col-sm-2">
                                 <label class="ui-check m-a-0">
                                     <input id="check_datefilter"  type="checkbox"><i></i><strong style="margin-left: 0px;">Apply Date Range Filter</strong>
                                 </label>
                                 <input type="text" name="daterange" id="daterange" class="form-control" value="" />
                             </div>
-                            <div class="col-md-3 col-sm-3" style="padding-top: 13px;">
+                            <div class="col-md-3 col-sm-2" style="padding-top: 13px;">
                                 <strong>Filter By Status</strong>
                                 <select id="status" name="status" class="form-control" >
                                     <option value="-1" selected >All</option>
@@ -103,7 +123,7 @@
                                     <option value="Unassigned">Unassigned</option>
                                 </select>
                             </div>
-                        </div>
+                         </div>
                         <div class="col-md-3 col-sm-3" style="padding-top: 10px;padding-bottom: 10px;margin-left: -13px;">
                             <strong>Update Status</strong>
                             <select name="action" id="action"  class="form-control"
@@ -255,6 +275,38 @@
         </div>
     </div>
     <script>
+        $(document).ready(function () {
+          $("#company_name").change(function () {
+                 var addCompanyNameId = $('#company_name option:selected').val();
+                 if (addCompanyNameId !== '' && typeof addCompanyNameId !== 'undefined' && addCompanyNameId !== 'null') {
+                     getProductListByCompanyId();
+                 }
+           });
+          
+          //OnChange Company List Display Particular Product Name
+            function getProductListByCompanyId() {
+                var customerDropDownId = $('#company_name option:selected').val();
+                if (customerDropDownId !== '' && typeof customerDropDownId !== 'undefined') {
+                  $.ajax({
+                    type: "get",
+                    url: "getProductListByCompanyId/" + customerDropDownId,
+                    dataType: "json",
+                    success: function (responseData) {
+                        $('#product_name').empty();
+                        $('#product_name').append($('<option>').text('All').attr('value', '')).trigger('change');
+                        $.each(responseData, function (productindex, productname) {
+                            if (productname.toLowerCase() == customerDropDownId.toLowerCase()) {
+                                var newProductDropdownOptionSelected = new Option(productname, productindex, true, true);
+                            } else {
+                                var newProductDropdownOptionSelected = new Option(productname, productindex, false, false);
+                            }
+                            $('#product_name').append(newProductDropdownOptionSelected).trigger('change');
+                        });
+                    }
+                 });
+                }
+             }          
+        });
 
         //For DateRangePicker
         $('#daterange').attr('value','');
@@ -279,9 +331,20 @@
         });
         $(function() {
             var status = null;
+            var company_name = null;
+            var product_name = null;
             var select_status = $('#status').val();
             var daterange = null;
             var status_type = $('#status_type').val();
+            
+            $('#company_name').on('change',function(){
+                company_name = $(this).val();
+                table.draw();
+            });
+            $('#product_name').on('change',function(){
+                product_name = $(this).val();
+                table.draw();
+            });
             $('#status').on('change',function(){
                 status = $(this).val();
                 table.draw();
@@ -313,6 +376,8 @@
                     url: '{!! route('pickups.data') !!}',
                     data: function (d) {
                         d.status = status;
+                        d.company_name = company_name;
+                        d.product_name = product_name;
                         d.select_status = select_status;
                         d.daterange = daterange;
                         d.status_type = status_type;
